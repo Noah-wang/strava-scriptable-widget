@@ -25,7 +25,7 @@
 // #############################################
 //
 // Set to false if you don't want to see a photo
-const photoWidget = true
+const photoWidget = false
 //
 // #############################################
 // #############################################
@@ -33,7 +33,9 @@ const photoWidget = true
 let clientID, clientSecret, refreshToken, data, miles, kmh, name, activityId, img
 const callActivities = `https://www.strava.com/api/v3/athlete/activities?access_token=`
 let widgetInput = args.widgetParameter
-
+clientID = 128028;
+clientSecret = "a7a931b36b64053eb0a22161a20fdc0f7b4056e7";
+refreshToken = "a4458cac5130652dd44ff6cf7cd190e0f533c0ce";
 if (widgetInput !== null) {
   [clientID, clientSecret, refreshToken] = widgetInput.split("|");
 
@@ -106,6 +108,7 @@ async function loadActivity(clientID, clientSecret, refreshToken) {
     return data
 
   } catch (e) {
+    console.error("Error loading activity: ", e);
     // If API is offline, use local data
     data = getSavedStravaData();
     console.log('using saved data')
@@ -132,7 +135,7 @@ async function createWidget(data) {
   const list = new ListWidget()
 
   //Check if activits has at least one photo
-  const hasPhoto = data.total_photo_count
+  const hasPhoto = data.total_photo_count || 0;
 
   // Set Colors
   let bg1 = new Color('ED7D30')
@@ -147,7 +150,7 @@ async function createWidget(data) {
   }
 
   // Get latest Acitivity Name
-  const latestActivity = data.name
+  const latestActivity = data.name || "Unknown Activity";
 
   let activityName = list.addText(latestActivity)
   activityName.font = Font.blackRoundedSystemFont(18)
@@ -159,7 +162,7 @@ async function createWidget(data) {
   let detailsStackFirstRow = list.addStack()
 
   // Get latest Distance
-  const latestDistance = data.distance
+  const latestDistance = data.distance || 0;
   let num = (latestDistance / 1000).toString()
   let roundedDistance = num.slice(0, (num.indexOf("."))+3)
 
@@ -171,16 +174,16 @@ async function createWidget(data) {
   detailsStackFirstRow.addSpacer()
 
   // Get latest average speed
-  const averageSpeedData = data.average_speed
+  const averageSpeedData = data.average_speed || 0;
   let averageSpeed = milesToKm(averageSpeedData).toFixed(2)
-  let averageSpeedText = detailsStackFirstRow.addText("Ø " + averageSpeed + " km/h")
+  let averageSpeedText = detailsStackFirstRow.addText("? " + averageSpeed + " km/h")
   averageSpeedText.font = Font.mediumSystemFont(10)
   averageSpeedText.textColor = textColor
 
   let detailsStackSecondRow = list.addStack()
 
   // Get max speed
-  const maxSpeedData = data.max_speed
+  const maxSpeedData = data.max_speed || 0;
   let maxSpeed = milesToKm(maxSpeedData).toFixed(1)
   let maxSpeedText = detailsStackSecondRow.addText("Max. " + maxSpeed +  " km/h")
   maxSpeedText.font = Font.mediumSystemFont(10)
@@ -189,7 +192,7 @@ async function createWidget(data) {
   detailsStackSecondRow.addSpacer()
 
   // Get kudos
-  const kudosData = data.kudos_count
+  const kudosData = data.kudos_count || 0;
   const kudosImage = createSymbol("hand.thumbsup")
 
   let kudosLine = detailsStackSecondRow.addStack()
@@ -210,17 +213,21 @@ async function createWidget(data) {
     const images = data.photos;
 
     //Get a photo from the activity
-    const imgUrl = data.photos.primary.urls["600"];
+    const imgUrl = images?.primary?.urls?.["600"];
 
-    try {
-      img = await loadImage(imgUrl)
-      saveImage (img)
-      console.log('using online image')
-    } catch (e) {
+    if (imgUrl) {
+      try {
+        img = await loadImage(imgUrl)
+        saveImage (img)
+        console.log('using online image')
+      } catch (e) {
+        img = getSavedImage()
+        console.log('using saved image')
+      }
+    } else {
       img = getSavedImage()
       console.log('using saved image')
     }
-
 
     bg1 = new Color('#00000000')
     bg2 = new Color('#00000000')
